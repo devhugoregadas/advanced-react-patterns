@@ -35,7 +35,7 @@ WORKSPACE="$HOME/Projets"; COMPANY="Studio IA"; CEO_BRAIN="openbot"
 CEO_HEARTBEAT_SEC=3600   # filet de sécurité ; le CEO est surtout réveillé par les événements
 MCP_MODE="keep"   # keep | register | unregister
 CLAUDE_EXEC=1     # force le CLI claude local (contourne le binaire trop ancien embarqué par Paperclip)
-CODEX_ENGINE="cli" # cli : respecte dangerouslyBypassApprovalsAndSandbox (accès réseau à Paperclip)
+CODEX_ENGINE="cli" # cli : codex du Mac, bac à sable workspace-write avec accès réseau à Paperclip
 
 while [[ $# -gt 0 ]]; do case "$1" in
   --workspace) WORKSPACE="$2"; shift 2;;
