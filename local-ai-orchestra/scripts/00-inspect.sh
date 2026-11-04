@@ -63,7 +63,12 @@ if curl -fsS -m 3 "$PAPERCLIP_URL/api/health" >/dev/null 2>&1; then
     echo "$companies" | jq -r '(if type=="array" then . else (.companies // .data // []) end)[] | "  société : \(.name) (\(.id))"' 2>/dev/null
   fi
 else ko "aucun serveur Paperclip sur $PAPERCLIP_URL"; fi
-launchctl list 2>/dev/null | grep -q com.local-ai-orchestra.paperclip && ok "service launchd Paperclip chargé" || warn "pas de service launchd → Paperclip ne redémarre pas tout seul"
+svc=$(launchctl list 2>/dev/null | awk 'tolower($3) ~ /paperclip/ {print $3}' | head -1)
+if [[ -z "$svc" ]]; then
+  plist=$(grep -lis paperclip "$HOME"/Library/LaunchAgents/*.plist 2>/dev/null | head -1)
+  [[ -n "$plist" ]] && svc=$(defaults read "${plist%.plist}" Label 2>/dev/null)
+fi
+[[ -n "$svc" ]] && ok "service launchd Paperclip : $svc" || warn "pas de service launchd → Paperclip ne redémarre pas tout seul"
 if npm view @paperclipai/mcp-server version >/dev/null 2>&1; then ok "@paperclipai/mcp-server disponible sur npm ($(npm view @paperclipai/mcp-server version))"
 else warn "impossible de vérifier @paperclipai/mcp-server sur npm"; fi
 claude mcp list 2>/dev/null | grep -qi paperclip && ok "MCP paperclip déclaré dans Claude Code" || warn "MCP paperclip non déclaré dans Claude Code"
