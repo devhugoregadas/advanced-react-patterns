@@ -70,8 +70,8 @@ bash scripts/02-paperclip-agents.sh --workspace "$HOME/Projets"   # 3. organigra
 - **OpenBot n'a pas de config déclarative** : la partie OpenBot passe par le prompt d'amorçage
   (ou l'UI). Rien n'est écrit directement dans sa base SQLite.
 - **Sécurité** : comme Paperclip et OpenBot par défaut, les agents tournent sans demande de
-  permission (`dangerouslySkipPermissions`, `dangerouslyBypassApprovalsAndSandbox`). Limite-les à
-  `--workspace`. Les validations humaines passent par les règles du CEO, pas par un bac à sable.
+  permission (`dangerouslySkipPermissions`) pour les agents Claude. Les agents Codex gardent un bac à
+  sable limité au dossier de travail, avec accès réseau. Limite-les à `--workspace`. Les validations humaines passent par les règles du CEO, pas par un bac à sable.
 - **Failover des exécutants** : Paperclip met Architecte-Claude en pause jusqu'à la fin du quota.
   La bascule vers Codex est faite par le CEO à son réveil suivant (≤ 10 min), pas instantanément.
 - **Validation d'une approval** : réponds dans OpenBot ; le CEO consigne ta réponse. Pour clore

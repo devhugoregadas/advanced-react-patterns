@@ -11,8 +11,10 @@
 #   --unregister-mcp  retire cet ajout global (Claude Code + ~/.codex/config.toml, avec sauvegarde).
 #   --no-claude-executable  n'ajoute pas CLAUDE_CODE_EXECUTABLE (utile quand Paperclip embarquera
 #                     claude-agent-acp >= 0.100, dont le binaire supporte claude-opus-5-5).
-#   --codex-engine cli|acp|auto  moteur Codex (défaut cli). Le moteur ACP garde son propre bac à
-#                     sable et peut bloquer l'accès de Dev-Codex à l'API Paperclip (127.0.0.1:3100).
+#   --codex-engine cli|acp|auto  moteur Codex (défaut cli). En cli, Paperclip lance le `codex` du Mac
+#                     avec un bac à sable workspace-write AVEC réseau (accès à l'API Paperclip).
+#                     Le moteur ACP par défaut utilise une copie de codex-acp (1.13.1) qui ignore
+#                     l'accès réseau : Dev-Codex ne joint plus 127.0.0.1:3100.
 #
 # Les réglages existants des agents (ex. adapterConfig.env) sont conservés : le script fusionne.
 #
@@ -90,7 +92,7 @@ upsert() {
        + (if $x=="" then {} else {env:{CLAUDE_CODE_EXECUTABLE:$x}} end)')
   else
     cfg=$(jq -n --arg cwd "$WORKSPACE" --arg i "$instr" --arg eng "$CODEX_ENGINE" \
-      '{cwd:$cwd, instructionsFilePath:$i, dangerouslyBypassApprovalsAndSandbox:true, engine:$eng}')
+      '{cwd:$cwd, instructionsFilePath:$i, dangerouslyBypassApprovalsAndSandbox:false, engine:$eng}')
   fi
   # Fusion avec la config existante : un PATCH remplace adapterConfig (et sa clé env) en entier.
   if [[ -n "$id" ]]; then
