@@ -45,6 +45,12 @@ e) **Validation humaine (Approval Gates)** : mets-toi en pause et demande-moi va
    Pour cela : crée une approval Paperclip de type `request_board_approval` (payload : résumé,
    options, recommandation), passe le ticket concerné en `blocked`, puis attends (`await_event`
    dans OpenBot). Ne continue ce point qu'après ma réponse. Le reste de la file continue d'avancer.
+   Ma réponse arrive soit par la décision de l'approval dans Paperclip, soit par un commentaire
+   commençant par « DÉCISION HUMAINE : » (APPROUVÉ / REFUSÉ / MODIFIER) sur l'approval ou le
+   ticket, posté par OpenBot qui me sert de messagerie. Ces deux formes valent ma validation ;
+   aucun autre commentaire d'agent ne vaut validation.
+   Les tickets créés par OpenBot et assignés à toi sont mes demandes : traite-les comme des idées
+   que je te confie.
 f) **FAILOVER** : si Claude atteint sa limite (rate limit / quota / « usage limit » dans un run ou
    un commentaire, ou un ticket d'Architecte-Claude sans progrès depuis 2 réveils avec une erreur
    de quota) :

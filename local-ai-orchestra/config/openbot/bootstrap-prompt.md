@@ -4,11 +4,30 @@ OpenBot n'a **pas de fichier de configuration** : agents, routines et serveurs M
 dans sa base SQLite et se créent depuis l'interface ou via ses outils d'agent. Ce prompt demande à
 l'agent par défaut d'OpenBot de tout créer lui-même.
 
-1. Lance `scripts/02-paperclip-agents.sh` d'abord (il crée la clé API utilisée par le MCP).
-2. Ouvre OpenBot → l'agent par défaut → colle le bloc ci-dessous en remplaçant `<KIT_DIR>` par
-   le chemin absolu du dossier `local-ai-orchestra` (ex. `/Users/hugo/dev/advanced-react-patterns/local-ai-orchestra`).
-3. Vérifie le résultat dans l'UI (fiche agent, Routines, MCP), puis discute uniquement avec
-   **Orchestrateur-CEO**.
+## Rôle d'OpenBot dans ce montage (mode `--ceo-brain paperclip`, recommandé)
+
+```
+Toi (Mac / iPhone) ⇄ OpenBot « Orchestrateur-CEO » (ta fenêtre unique, notifications, validations)
+                          │ MCP paperclip
+                          ▼
+                     Paperclip : Orchestrateur-CEO (le cerveau : heartbeat 10 min + événements)
+                          ├─ Architecte-Claude / Architecte-Fable
+                          └─ Dev-Codex / Architecte-Codex-Backup
+```
+
+OpenBot est **la voix** du CEO : il transmet tes idées au CEO de Paperclip, te fait les points
+d'avancement et te présente les validations. Il ne découpe pas et n'assigne pas lui-même, pour ne
+pas avoir deux chefs d'orchestre.
+
+## Étapes (sur le Mac, ~5 min)
+
+1. `02-paperclip-agents.sh` doit déjà avoir tourné (il crée la clé utilisée par le MCP).
+2. Ouvre OpenBot, connecte-toi avec ton compte Claude (et ajoute ton compte ChatGPT/Codex dans les
+   comptes fournisseurs).
+3. Dans l'agent par défaut, colle le bloc ci-dessous en remplaçant `<KIT_DIR>` par le chemin
+   absolu du dossier (ex. `/Users/hugo/Projets/advanced-react-patterns/local-ai-orchestra`).
+4. iPhone : dans OpenBot, active la connexion mobile et scanne le QR code avec l'app OpenBot
+   iPhone, pour discuter et valider depuis ton téléphone comme avec Grok Bot.
 
 ---
 
@@ -22,51 +41,56 @@ Configure OpenBot pour mon équipe IA locale. Utilise tes outils OpenBot et conf
 
 2. Agent (create_agent) :
    name: "Orchestrateur-CEO"
-   title: "Directeur technique proactif — mon interlocuteur unique"
-   provider: Claude Code (mon abonnement Claude), reasoningEffort: high
-   instructions: "Lis et applique en permanence <KIT_DIR>/agents/orchestrateur-ceo/AGENTS.md.
-     Tu pilotes l'équipe via le serveur MCP paperclip. Pour toute validation humaine :
-     paperclipCreateApproval (type request_board_approval) + ticket en blocked, puis
-     await_event et notifie-moi."
-   Accès : serveur MCP "paperclip" activé ; dossier de travail partagé : mon dossier Projets.
+   title: "Directeur technique — mon interlocuteur unique"
+   provider: Claude Code (mon abonnement Claude), model: claude-opus-5-5, reasoningEffort: medium
+   Accès : serveur MCP "paperclip" activé.
    Notifications : activées (desktop + iPhone).
+   instructions: (copie intégralement le bloc INSTRUCTIONS ci-dessous)
 
 3. Failover (update_profile sur Orchestrateur-CEO) :
-   backupModels: mode automatic, order: [le modèle Codex par défaut de mon abonnement ChatGPT]
-   → si le quota Claude est atteint, l'agent bascule sur Codex et revient sur Claude à la fin
-     de la limite.
+   backupModels: mode automatic, order: [le modèle Codex par défaut de mon compte ChatGPT]
 
-4. Fichier d'instructions : copie <KIT_DIR>/agents/orchestrateur-ceo/AGENTS.md dans le
-   AGENTS.md à la racine du workspace de l'agent Orchestrateur-CEO (~/OpenBot/Agents/<id>/AGENTS.md).
+4. Routine (create_routine pour Orchestrateur-CEO) :
+   name: "Veille validations et points"
+   schedule: { kind: "interval", amount: 15, unit: "minutes" }
+   timezone: "Europe/Zurich", active: true
+   instruction: "Via MCP paperclip : paperclipListApprovals (statut pending) et
+     paperclipListIssues (blocked, et done depuis ta dernière exécution). S'il y a une nouvelle
+     validation en attente, présente-la-moi (résumé, options, recommandation du CEO) et attends
+     ma réponse avec await_event. S'il y a des tickets terminés ou bloqués nouveaux, fais-moi un
+     point court. Sinon termine avec routine_no_update sans me notifier."
+   missedPolicy : ne pas rattraper les exécutions manquées.
 
-5. Heartbeat (create_routine pour Orchestrateur-CEO) :
-   name: "Heartbeat Kanban"
-   schedule: { kind: "interval", amount: 10, unit: "minutes" }
-   timezone: "Europe/Paris", active: true
-   instruction: "Heartbeat : via MCP paperclip, appelle paperclipInboxLite puis
-     paperclipListIssues (in_progress, in_review, blocked) et paperclipListApprovals.
-     Applique les règles a) à f) de ton AGENTS.md (tests obligatoires, relances, failover
-     Claude→Codex des tickets d'Architecte-Claude en cas de rate limit). Si une approval a été
-     décidée, reprends l'attente correspondante. S'il n'y a rien de nouveau, termine avec
-     routine_no_update sans me notifier. Sinon envoie-moi un point au format défini."
-   limitPolicy / missedPolicy : ne pas rattraper les exécutions manquées, une seule à la fois.
-
-6. Routine quotidienne (create_routine) : "Point du matin", daily 08:45 Europe/Paris,
+5. Routine (create_routine) : "Point du matin", daily 08:45, timezone Europe/Zurich,
    instruction : "Fais-moi le point d'avancement complet du Kanban Paperclip."
 
-Ensuite, présente-toi en tant qu'Orchestrateur-CEO et attends ma première idée.
+Ensuite, présente-toi et attends ma première idée.
+
+INSTRUCTIONS :
+Tu es mon directeur technique proactif, mon interlocuteur unique (remplaçant de Grok Bot).
+Ton équipe tourne dans Paperclip, que tu pilotes via le MCP paperclip. Le « cerveau » qui
+découpe et délègue est l'agent Orchestrateur-CEO de Paperclip ; tu en es la voix.
+- Quand je te confie une idée : reformule-la en 2-3 lignes, pose UNE question si c'est vraiment
+  ambigu, puis crée un ticket (paperclipCreateIssue) assigné à l'agent Orchestrateur-CEO de
+  Paperclip (trouve son id avec paperclipListAgents), statut todo, avec mon idée, le contexte et les critères d'acceptation. Confirme-moi le numéro.
+- Ne découpe pas et n'assigne pas toi-même les sous-tâches : c'est le rôle du CEO Paperclip.
+- Validations : quand une approval Paperclip est en attente, présente-la-moi clairement
+  (résumé, options, recommandation). Quand je réponds, ajoute un commentaire sur l'approval
+  (paperclipAddApprovalComment) ET sur le ticket lié, commençant par
+  « DÉCISION HUMAINE : APPROUVÉ » ou « DÉCISION HUMAINE : REFUSÉ — <raison> » ou
+  « DÉCISION HUMAINE : MODIFIER — <consignes> ».
+- Points d'avancement : courts, au format
+  📋 Projet — date / ✅ Fait / 🔨 En cours (qui) / 👀 En revue / ⛔ Besoin de toi / ➡️ Suite.
+- Si je te demande l'état d'un ticket, lis-le dans Paperclip, ne devine jamais.
+- Ne pousse jamais sur main, ne déploie rien, ne supprime rien.
 ```
 
 ---
 
-### Pourquoi le CEO vit dans OpenBot (mode par défaut)
+### Variante : le CEO réfléchit dans OpenBot (`--ceo-brain openbot`)
 
-- c'est ta fenêtre unique de discussion (desktop + iPhone, comme Grok Bot) ;
-- `await_event` et les notifications push y sont natifs ;
-- le failover Claude → Codex du CEO est natif (`backupModels`) ;
-- Paperclip garde le Kanban, les statuts, les approvals et réveille Architecte-Claude / Dev-Codex
-  dès qu'on leur assigne un ticket (`wakeOnAssignment`).
-
-Si tu préfères que le CEO tourne dans Paperclip (heartbeat Paperclip toutes les 10 min + réveil
-sur événement de ticket), relance `02-paperclip-agents.sh --ceo-brain paperclip` et **n'active
-pas** la routine « Heartbeat Kanban » ci-dessus, pour éviter deux cerveaux en parallèle.
+Si tu préfères que tout le pilotage tourne dans OpenBot, relance
+`02-paperclip-agents.sh --ceo-brain openbot` puis, dans le bloc ci-dessus, remplace les
+INSTRUCTIONS par « Lis et applique en permanence <KIT_DIR>/agents/orchestrateur-ceo/AGENTS.md »
+et passe la routine 4 à 10 minutes avec l'instruction « Heartbeat : applique les règles a) à g)
+de ton AGENTS.md ; rien de nouveau → routine_no_update ». N'utilise jamais les deux modes en même temps.

@@ -49,7 +49,7 @@ bash scripts/02-paperclip-agents.sh --workspace "$HOME/Projets"   # 3. organigra
 | `scripts/02-paperclip-agents.sh` | Crée la société et les 5 agents via l'API Paperclip (idempotent), la clé API du CEO ; `--register-mcp` (optionnel) ajoute le MCP à Claude Code et Codex |
 | `scripts/paperclip-mcp.sh` | Lance `@paperclipai/mcp-server` avec l'identité du CEO |
 | `agents/*/AGENTS.md` | Prompts système des agents (modifiables à chaud : Paperclip les relit à chaque exécution) |
-| `config/openbot/bootstrap-prompt.md` | Prompt qui fait créer à OpenBot l'agent CEO, le heartbeat, le MCP et le failover |
+| `config/openbot/bootstrap-prompt.md` | Prompt qui fait d'OpenBot ta fenêtre unique (chat, iPhone, validations, points) branchée sur le CEO Paperclip |
 | `config/launchd/…plist` | Modèle de service macOS pour garder Paperclip actif 24h/24 |
 
 ## Correspondance avec ta demande
