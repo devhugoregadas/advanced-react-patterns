@@ -4,7 +4,11 @@
 #
 # Usage :
 #   bash local-ai-orchestra/scripts/02-paperclip-agents.sh --workspace "$HOME/Projets" \
-#        [--company "Studio IA"] [--ceo-brain openbot|paperclip]
+#        [--company "Studio IA"] [--ceo-brain openbot|paperclip] [--register-mcp|--unregister-mcp]
+#
+#   --register-mcp    ajoute le MCP Paperclip (identité du CEO) à TOUS les Claude Code / Codex
+#                     du Mac. Désactivé par défaut : OpenBot et les agents Paperclip n'en ont pas besoin.
+#   --unregister-mcp  retire cet ajout global (Claude Code + ~/.codex/config.toml, avec sauvegarde).
 #
 #   --ceo-brain openbot    (défaut) le CEO "pense" dans OpenBot (chat, notifications iPhone,
 #                          await_event, failover natif Claude→Codex). Dans Paperclip, sa fiche sert
@@ -20,11 +24,14 @@ STATE_DIR="$HOME/.config/local-ai-orchestra"
 STATE="$STATE_DIR/state.env"
 WORKSPACE="$HOME/Projets"; COMPANY="Studio IA"; CEO_BRAIN="openbot"
 CEO_HEARTBEAT_SEC=600
+MCP_MODE="keep"   # keep | register | unregister
 
 while [[ $# -gt 0 ]]; do case "$1" in
   --workspace) WORKSPACE="$2"; shift 2;;
   --company) COMPANY="$2"; shift 2;;
   --ceo-brain) CEO_BRAIN="$2"; shift 2;;
+  --register-mcp) MCP_MODE="register"; shift;;
+  --unregister-mcp) MCP_MODE="unregister"; shift;;
   *) echo "Option inconnue : $1"; exit 1;;
 esac; done
 [[ "$CEO_BRAIN" =~ ^(openbot|paperclip)$ ]] || { echo "--ceo-brain doit valoir openbot ou paperclip"; exit 1; }
@@ -126,13 +133,24 @@ echo "✔ État enregistré dans $STATE (chmod 600)"
 # --- Serveur MCP Paperclip pour Claude Code / Codex (usage manuel, optionnel) ---------------
 MCP_WRAPPER="$KIT_DIR/scripts/paperclip-mcp.sh"
 chmod +x "$MCP_WRAPPER"
-if command -v claude >/dev/null && ! claude mcp list 2>/dev/null | grep -qi '^paperclip'; then
-  claude mcp add --scope user paperclip -- "$MCP_WRAPPER" && echo "✔ MCP paperclip ajouté à Claude Code"
-fi
-if command -v codex >/dev/null && ! grep -qs 'mcp_servers.paperclip' "$HOME/.codex/config.toml"; then
-  mkdir -p "$HOME/.codex"
-  printf '\n[mcp_servers.paperclip]\ncommand = "%s"\nargs = []\n' "$MCP_WRAPPER" >> "$HOME/.codex/config.toml"
-  echo "✔ MCP paperclip ajouté à Codex (~/.codex/config.toml)"
+if [[ "$MCP_MODE" == register ]]; then
+  if command -v claude >/dev/null && ! claude mcp list 2>/dev/null | grep -qi '^paperclip'; then
+    claude mcp add --scope user paperclip -- "$MCP_WRAPPER" && echo "✔ MCP paperclip ajouté à Claude Code"
+  fi
+  if command -v codex >/dev/null && ! grep -qs 'mcp_servers.paperclip' "$HOME/.codex/config.toml"; then
+    mkdir -p "$HOME/.codex"
+    printf '\n[mcp_servers.paperclip]\ncommand = "%s"\nargs = []\n' "$MCP_WRAPPER" >> "$HOME/.codex/config.toml"
+    echo "✔ MCP paperclip ajouté à Codex (~/.codex/config.toml)"
+  fi
+elif [[ "$MCP_MODE" == unregister ]]; then
+  command -v claude >/dev/null && claude mcp remove --scope user paperclip >/dev/null 2>&1 \
+    && echo "✔ MCP paperclip retiré de Claude Code"
+  CODEX_CFG="$HOME/.codex/config.toml"
+  if grep -qs '^\[mcp_servers\.paperclip\]' "$CODEX_CFG"; then
+    cp "$CODEX_CFG" "$CODEX_CFG.bak.$(date +%Y%m%d%H%M%S)"
+    awk '/^\[/{skip=($0=="[mcp_servers.paperclip]")} !skip' "$CODEX_CFG" > "$CODEX_CFG.tmp" && mv "$CODEX_CFG.tmp" "$CODEX_CFG"
+    echo "✔ MCP paperclip retiré de Codex (sauvegarde : $CODEX_CFG.bak.*)"
+  fi
 fi
 
 cat <<EOF

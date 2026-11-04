@@ -4,7 +4,7 @@ Paquet officiel : `@paperclipai/mcp-server` (couche fine au-dessus de l'API REST
 
 Le wrapper `../../scripts/paperclip-mcp.sh` charge `~/.config/local-ai-orchestra/state.env`
 (URL, société, identité et clé du CEO) puis lance `npx -y @paperclipai/mcp-server`.
-`02-paperclip-agents.sh` l'enregistre automatiquement dans :
+`02-paperclip-agents.sh --register-mcp` l'enregistre (optionnel, retrait avec `--unregister-mcp`) dans :
 
 - **Claude Code** : `claude mcp add --scope user paperclip -- <KIT_DIR>/scripts/paperclip-mcp.sh`
 - **Codex** : `~/.codex/config.toml`

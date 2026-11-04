@@ -58,23 +58,23 @@ cat <<EOF
 EOF
 
 step "Paperclip (serveur local, mode local_trusted, port 3100)"
+# Pas de `paperclipai onboard` ici : il démarre le serveur et ne rend jamais la main.
+# `paperclipai run` (lancé par le service) fait lui-même l'onboarding si la config manque.
 if curl -fsS -m 3 "$PAPERCLIP_URL/api/health" >/dev/null 2>&1; then
   echo "  Paperclip tourne déjà sur $PAPERCLIP_URL."
-else
-  if [[ ! -f "$HOME/.paperclip/instances/default/config.json" ]]; then
-    ask "Initialiser Paperclip (npx paperclipai@latest onboard --yes) ?" && npx -y paperclipai@latest onboard --yes
-  fi
 fi
 
 PLIST="$HOME/Library/LaunchAgents/com.local-ai-orchestra.paperclip.plist"
-if ask "Installer Paperclip comme service launchd (démarre au login, redémarre s'il plante) ?"; then
+if [[ -f "$PLIST" ]] && curl -fsS -m 3 "$PAPERCLIP_URL/api/health" >/dev/null 2>&1; then
+  echo "  Service launchd déjà en place."
+elif ask "Installer Paperclip comme service launchd (onboarding auto, démarre au login, redémarre s'il plante) ?"; then
   NPX_BIN="$(command -v npx)"
   sed -e "s#__NPX__#$NPX_BIN#g" -e "s#__PATH__#$AGENT_PATH#g" -e "s#__HOME__#$HOME#g" -e "s#__LOGS__#$LOG_DIR#g" \
     "$KIT_DIR/config/launchd/com.local-ai-orchestra.paperclip.plist" > "$PLIST"
   launchctl bootout "gui/$(id -u)" "$PLIST" 2>/dev/null || true
   launchctl bootstrap "gui/$(id -u)" "$PLIST"
   echo "  Service chargé. Logs : $LOG_DIR/paperclip.*.log"
-  for i in {1..30}; do curl -fsS -m 2 "$PAPERCLIP_URL/api/health" >/dev/null 2>&1 && break; sleep 2; done
+  for i in {1..90}; do curl -fsS -m 2 "$PAPERCLIP_URL/api/health" >/dev/null 2>&1 && break; sleep 2; done
   curl -fsS -m 2 "$PAPERCLIP_URL/api/health" >/dev/null 2>&1 && echo "  ✔ Paperclip répond." || echo "  ⚠ Paperclip ne répond pas encore — voir les logs."
 fi
 
