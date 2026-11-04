@@ -16,7 +16,8 @@ Une équipe IA 100 % locale sur ton MacBook Pro, propulsée uniquement par tes a
  ┌──────────────────────── Paperclip (localhost:3100) ─────┐
  │  Kanban : todo → in_progress → in_review → done         │
  │  Approvals (validations humaines)                       │
- │  ├─ Architecte-Claude        claude_local               │
+ │  ├─ Architecte-Claude        claude_local (Opus 5.5)    │
+ │  ├─ Architecte-Fable         claude_local (Fable 5.1)   │
  │  ├─ Dev-Codex                codex_local (tests)        │
  │  └─ Architecte-Codex-Backup  codex_local (failover)     │
  └─────────────────────────────────────────────────────────┘
@@ -45,7 +46,7 @@ bash scripts/02-paperclip-agents.sh --workspace "$HOME/Projets"   # 3. organigra
 |---|---|
 | `scripts/00-inspect.sh` | Diagnostic : Node ≥ 24.11, claude/codex dans le PATH (shell **et** apps graphiques), Docker, Paperclip, MCP, OpenBot, veille |
 | `scripts/01-install.sh` | Installe jq/Node/CLIs, corrige le PATH des apps graphiques, `paperclipai onboard`, service launchd, veille désactivée |
-| `scripts/02-paperclip-agents.sh` | Crée la société et les 4 agents via l'API Paperclip (idempotent), la clé API du CEO ; `--register-mcp` (optionnel) ajoute le MCP à Claude Code et Codex |
+| `scripts/02-paperclip-agents.sh` | Crée la société et les 5 agents via l'API Paperclip (idempotent), la clé API du CEO ; `--register-mcp` (optionnel) ajoute le MCP à Claude Code et Codex |
 | `scripts/paperclip-mcp.sh` | Lance `@paperclipai/mcp-server` avec l'identité du CEO |
 | `agents/*/AGENTS.md` | Prompts système des agents (modifiables à chaud : Paperclip les relit à chaque exécution) |
 | `config/openbot/bootstrap-prompt.md` | Prompt qui fait créer à OpenBot l'agent CEO, le heartbeat, le MCP et le failover |
@@ -61,6 +62,7 @@ bash scripts/02-paperclip-agents.sh --workspace "$HOME/Projets"   # 3. organigra
 | Communication entre agents | Commentaires avec @mention sur les tickets Paperclip |
 | Tests obligatoires avant Review | Règle d) du CEO + règle absolue de Dev-Codex (commande + sortie + exit code collés) |
 | Approval Gates | `paperclipCreateApproval` (`request_board_approval`) + `await_event` + notification OpenBot |
+| Escalade Opus → Fable | Règle des deux essais d'Architecte-Claude (commentaire `ESCALADE`) + règle g) du CEO — voir `agents/PROTOCOLE-modeles-claude.md` |
 | Failover rate limit | CEO : `backupModels` OpenBot (Claude → Codex, retour auto). Tickets : le CEO réassigne à Architecte-Codex-Backup / Dev-Codex |
 
 ## Limites connues

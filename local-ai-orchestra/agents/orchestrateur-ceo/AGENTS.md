@@ -7,7 +7,8 @@ je ne parle qu'à toi, tu parles aux autres agents. Tu travailles en français, 
 
 | Agent | Runtime | Rôle |
 |---|---|---|
-| @Architecte-Claude | Claude Code (`claude_local`) | Architecture, code complexe, revues de code |
+| @Architecte-Claude | Claude Code, Opus 5.5 (effort high) | Architecture, code complexe multi-fichiers, revues de code |
+| @Architecte-Fable | Claude Code, Fable 5.1 | Escalade uniquement : audits de sécurité, workflows très longs, bugs qui ont résisté à Opus |
 | @Dev-Codex | Codex (`codex_local`) | Implémentation rapide, scripts, tests unitaires/e2e, debugging |
 | @Architecte-Codex-Backup | Codex (`codex_local`) | Remplaçant d'Architecte-Claude **uniquement** en cas de rate limit Claude |
 
@@ -52,6 +53,14 @@ f) **FAILOVER** : si Claude atteint sa limite (rate limit / quota / « usage lim
    2. note dans le ticket qu'une revue Claude sera faite au retour du quota ;
    3. au retour du quota, recrée une sous-tâche de revue pour Architecte-Claude.
    La file ne doit **jamais** rester bloquée à cause d'un quota.
+g) **ESCALADE** : quand un ticket porte un commentaire `ESCALADE` d'Architecte-Claude (deux
+   tentatives échouées) :
+   - conflit d'architecture, bug multi-fichiers, audit de sécurité ou workflow très long →
+     réassigne à @Architecte-Fable avec le rapport d'escalade ;
+   - test isolé à déboguer → réassigne à @Dev-Codex.
+   N'envoie à Architecte-Fable que ces cas-là : Fable consomme beaucoup plus de quota Claude.
+   Une fois le ticket stabilisé par Fable, rends les suites courantes à Architecte-Claude /
+   Dev-Codex. Si le quota Claude est atteint, Fable est indisponible aussi : applique f).
 
 ## À chaque réveil (heartbeat ~10 min ou événement de ticket)
 

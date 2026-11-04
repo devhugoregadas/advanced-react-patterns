@@ -63,13 +63,16 @@ else echo "• Société existante : $COMPANY ($CID)"; fi
 CLAUDE_BIN="$(command -v claude || echo claude)"
 
 # --- Agents --------------------------------------------------------------------------------
-# upsert NAME ROLE TITLE ADAPTER INSTR_DIR REPORTS_TO HEARTBEAT_JSON CAPABILITIES
+# upsert NAME ROLE TITLE ADAPTER INSTR_DIR REPORTS_TO HEARTBEAT_JSON CAPABILITIES [MODEL] [EFFORT]
 upsert() {
   local name="$1" role="$2" title="$3" adapter="$4" instr="$KIT_DIR/agents/$5/AGENTS.md" reports="$6" hb="$7" caps="$8"
+  local model="${9:-}" effort="${10:-}"
   local cfg
   if [[ "$adapter" == claude_local ]]; then
     cfg=$(jq -n --arg cwd "$WORKSPACE" --arg i "$instr" --arg c "$CLAUDE_BIN" \
-      '{cwd:$cwd, instructionsFilePath:$i, command:$c, dangerouslySkipPermissions:true}')
+      --arg m "$model" --arg e "$effort" \
+      '{cwd:$cwd, instructionsFilePath:$i, command:$c, dangerouslySkipPermissions:true}
+       + (if $m=="" then {} else {model:$m} end) + (if $e=="" then {} else {effort:$e} end)')
   else
     cfg=$(jq -n --arg cwd "$WORKSPACE" --arg i "$instr" \
       '{cwd:$cwd, instructionsFilePath:$i, dangerouslyBypassApprovalsAndSandbox:true}')
@@ -100,9 +103,14 @@ fi
 WORKER_HB='{"enabled":false,"intervalSec":0,"wakeOnDemand":true,"wakeOnAssignment":true,"wakeOnAutomation":true}'
 
 CEO_ID=$(upsert "Orchestrateur-CEO" ceo "Directeur technique / chef d'orchestre" claude_local orchestrateur-ceo "" \
-  "$CEO_HB" "Découpe les demandes en tickets, délègue, suit le Kanban, impose les tests, gère approvals et failover")
+  "$CEO_HB" "Découpe les demandes en tickets, délègue, suit le Kanban, impose les tests, gère approvals, escalade et failover" \
+  claude-opus-5-5 medium)
 ARCH_ID=$(upsert "Architecte-Claude" cto "Architecte logiciel" claude_local architecte-claude "$CEO_ID" \
-  "$WORKER_HB" "Architecture, code complexe, revues de code")
+  "$WORKER_HB" "Architecture, code complexe multi-fichiers, revues de code" \
+  claude-opus-5-5 high)
+FABLE_ID=$(upsert "Architecte-Fable" engineer "Spécialiste escalade / raisonnement profond" claude_local architecte-fable "$CEO_ID" \
+  "$WORKER_HB" "Audits de sécurité, workflows très longs, bugs qui ont résisté à Opus (escalade uniquement)" \
+  claude-fable-5-1 high)
 DEV_ID=$(upsert "Dev-Codex" engineer "Développeur / testeur" codex_local dev-codex "$CEO_ID" \
   "$WORKER_HB" "Implémentation rapide, scripts, tests unitaires et e2e dans le terminal, debugging")
 BACKUP_ID=$(upsert "Architecte-Codex-Backup" engineer "Architecte de secours (failover quota Claude)" codex_local architecte-codex-backup "$CEO_ID" \
@@ -123,6 +131,7 @@ PAPERCLIP_COMPANY_ID="$CID"
 PAPERCLIP_AGENT_ID="$CEO_ID"
 PAPERCLIP_API_KEY="$CEO_KEY"
 ARCHITECTE_CLAUDE_ID="$ARCH_ID"
+ARCHITECTE_FABLE_ID="$FABLE_ID"
 DEV_CODEX_ID="$DEV_ID"
 ARCHITECTE_CODEX_BACKUP_ID="$BACKUP_ID"
 CEO_BRAIN="$CEO_BRAIN"
@@ -157,7 +166,8 @@ cat <<EOF
 
 Organigramme prêt :
   Orchestrateur-CEO ($CEO_BRAIN)
-   ├─ Architecte-Claude        (claude_local)
+   ├─ Architecte-Claude        (claude_local, Opus 5.5, effort high)
+   ├─ Architecte-Fable         (claude_local, Fable 5.1, escalade)
    ├─ Dev-Codex                (codex_local)
    └─ Architecte-Codex-Backup  (codex_local, failover)
 
