@@ -14,8 +14,9 @@
 #                          await_event, failover natif Claude→Codex). Dans Paperclip, sa fiche sert
 #                          d'identité (clé API, organigramme) et son heartbeat Paperclip est coupé
 #                          pour ne pas faire tourner deux cerveaux.
-#   --ceo-brain paperclip  le CEO tourne dans Paperclip : heartbeat toutes les 10 min + réveil
-#                          sur événement de ticket. OpenBot ne sert alors que de fenêtre de chat.
+#   --ceo-brain paperclip  le CEO tourne dans Paperclip : réveil sur événement (assignation,
+#                          sollicitation, approval) + filet de sécurité toutes les 60 min
+#                          (--ceo-heartbeat-min N pour changer). OpenBot sert de fenêtre de chat.
 set -euo pipefail
 
 KIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -23,7 +24,7 @@ PAPERCLIP_URL="${PAPERCLIP_URL:-http://127.0.0.1:3100}"
 STATE_DIR="$HOME/.config/local-ai-orchestra"
 STATE="$STATE_DIR/state.env"
 WORKSPACE="$HOME/Projets"; COMPANY="Studio IA"; CEO_BRAIN="openbot"
-CEO_HEARTBEAT_SEC=600
+CEO_HEARTBEAT_SEC=3600   # filet de sécurité ; le CEO est surtout réveillé par les événements
 MCP_MODE="keep"   # keep | register | unregister
 
 while [[ $# -gt 0 ]]; do case "$1" in
@@ -31,6 +32,7 @@ while [[ $# -gt 0 ]]; do case "$1" in
   --company) COMPANY="$2"; shift 2;;
   --ceo-brain) CEO_BRAIN="$2"; shift 2;;
   --register-mcp) MCP_MODE="register"; shift;;
+  --ceo-heartbeat-min) CEO_HEARTBEAT_SEC=$(( $2 * 60 )); shift 2;;
   --unregister-mcp) MCP_MODE="unregister"; shift;;
   *) echo "Option inconnue : $1"; exit 1;;
 esac; done

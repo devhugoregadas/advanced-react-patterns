@@ -9,7 +9,7 @@ Une équipe IA 100 % locale sur ton MacBook Pro, propulsée uniquement par tes a
           ▼
  ┌──────────────────────── OpenBot ────────────────────────┐
  │  Orchestrateur-CEO  (Claude, failover auto → Codex)     │
- │  routine "Heartbeat Kanban" toutes les 10 min           │
+ │  veille des validations toutes les heures               │
  └──────────────┬──────────────────────────────────────────┘
                 │ MCP @paperclipai/mcp-server
                 ▼
@@ -57,7 +57,7 @@ bash scripts/02-paperclip-agents.sh --workspace "$HOME/Projets"   # 3. organigra
 | Demande | Mise en œuvre |
 |---|---|
 | Kanban [To Do]/[In Progress]/[Review]/[Done] | Statuts Paperclip `todo` / `in_progress` / `in_review` / `done` (+ `blocked`) |
-| Heartbeat 5–15 min | Routine OpenBot toutes les 10 min (ou `--ceo-brain paperclip` : `runtimeConfig.heartbeat.intervalSec = 600` + réveil sur événement de ticket) |
+| Heartbeat | Mode économe : le CEO Paperclip se réveille sur événement (assignation, sollicitation, approval) + filet de sécurité toutes les 60 min (`--ceo-heartbeat-min`). OpenBot vérifie les validations toutes les heures. Aucune routine récurrente par défaut |
 | Délégation Architecte / Dev | Assignation de tickets ; les exécutants se réveillent à l'assignation (`wakeOnAssignment`) |
 | Communication entre agents | Commentaires avec @mention sur les tickets Paperclip |
 | Tests obligatoires avant Review | Règle d) du CEO + règle absolue de Dev-Codex (commande + sortie + exit code collés) |

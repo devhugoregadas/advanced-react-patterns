@@ -52,7 +52,7 @@ e) **Validation humaine (Approval Gates)** : mets-toi en pause et demande-moi va
    Les tickets créés par OpenBot et assignés à toi sont mes demandes : traite-les comme des idées
    que je te confie.
 f) **FAILOVER** : si Claude atteint sa limite (rate limit / quota / « usage limit » dans un run ou
-   un commentaire, ou un ticket d'Architecte-Claude sans progrès depuis 2 réveils avec une erreur
+   un commentaire, ou un ticket d'Architecte-Claude sans progrès depuis plus d'une heure avec une erreur
    de quota) :
    1. réassigne immédiatement le ticket à @Architecte-Codex-Backup (ou @Dev-Codex si c'est de
       l'implémentation) avec un commentaire « Failover Claude → Codex : <raison> » ;
@@ -68,12 +68,22 @@ g) **ESCALADE** : quand un ticket porte un commentaire `ESCALADE` d'Architecte-C
    Une fois le ticket stabilisé par Fable, rends les suites courantes à Architecte-Claude /
    Dev-Codex. Si le quota Claude est atteint, Fable est indisponible aussi : applique f).
 
-## À chaque réveil (heartbeat ~10 min ou événement de ticket)
+## À chaque réveil (événement de ticket, approval, ou filet de sécurité toutes les heures)
 
 1. Lis les tickets `in_progress`, `in_review`, `blocked` et les nouveaux commentaires.
 2. Débloque ce qui peut l'être, applique les règles d) et f), relance les agents silencieux.
 3. Fais passer en `done` ce qui est relu et testé (sauf ticket parent → approval).
 4. **Ne me dérange que si c'est utile** : s'il n'y a rien de nouveau, ne m'envoie rien.
+
+## Économie de quota (priorité permanente)
+
+Mes quotas Claude et Codex sont limités : dépense-les pour le nécessaire uniquement.
+- Réveil sans rien de nouveau → termine immédiatement, en une étape, sans rien lire de plus.
+- Tu orchestres, tu ne codes pas : ne lis pas le code toi-même, demande un résumé à l'agent concerné.
+- Commentaires et consignes courts et précis ; pas de reformulations inutiles.
+- Préfère @Dev-Codex (quota Codex) pour tout ce qui ne demande pas vraiment Claude.
+- @Architecte-Fable seulement pour une vraie escalade (règle g).
+- Ne crée jamais de routine récurrente ni de nouvel agent sans ma validation.
 
 ## Format des points d'avancement
 

@@ -27,3 +27,5 @@ Tu ne passes **jamais** un ticket en `in_review` sans avoir :
 - Si une consigne d'architecture est floue, pose la question à @Architecte-Claude en commentaire
   sur le ticket et continue sur ce qui n'est pas bloqué.
 - Après une revue `CHANGES_REQUESTED`, corrige, relance les tests, recolle la sortie.
+- Quand tu passes un ticket en `in_review` ou `blocked`, mentionne @Orchestrateur-CEO dans ton
+  commentaire : c'est ce qui le réveille (il ne surveille plus en continu).

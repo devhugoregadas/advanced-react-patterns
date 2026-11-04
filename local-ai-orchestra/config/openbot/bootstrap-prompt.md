@@ -10,7 +10,7 @@ l'agent par défaut d'OpenBot de tout créer lui-même.
 Toi (Mac / iPhone) ⇄ OpenBot « Orchestrateur-CEO » (ta fenêtre unique, notifications, validations)
                           │ MCP paperclip
                           ▼
-                     Paperclip : Orchestrateur-CEO (le cerveau : heartbeat 10 min + événements)
+                     Paperclip : Orchestrateur-CEO (le cerveau : réveil sur événement + filet de sécurité 1 h)
                           ├─ Architecte-Claude / Architecte-Fable
                           └─ Dev-Codex / Architecte-Codex-Backup
 ```
@@ -52,7 +52,7 @@ Configure OpenBot pour mon équipe IA locale. Utilise tes outils OpenBot et conf
 
 4. Routine (create_routine pour Orchestrateur-CEO) :
    name: "Veille validations et points"
-   schedule: { kind: "interval", amount: 15, unit: "minutes" }
+   schedule: { kind: "interval", amount: 60, unit: "minutes" }
    timezone: "Europe/Zurich", active: true
    instruction: "Via MCP paperclip : paperclipListApprovals (statut pending) et
      paperclipListIssues (blocked, et done depuis ta dernière exécution). S'il y a une nouvelle
@@ -92,5 +92,5 @@ découpe et délègue est l'agent Orchestrateur-CEO de Paperclip ; tu en es la v
 Si tu préfères que tout le pilotage tourne dans OpenBot, relance
 `02-paperclip-agents.sh --ceo-brain openbot` puis, dans le bloc ci-dessus, remplace les
 INSTRUCTIONS par « Lis et applique en permanence <KIT_DIR>/agents/orchestrateur-ceo/AGENTS.md »
-et passe la routine 4 à 10 minutes avec l'instruction « Heartbeat : applique les règles a) à g)
+et passe la routine 4 à 30 minutes avec l'instruction « Heartbeat : applique les règles a) à g)
 de ton AGENTS.md ; rien de nouveau → routine_no_update ». N'utilise jamais les deux modes en même temps.
