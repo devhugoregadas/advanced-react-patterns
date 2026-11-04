@@ -25,8 +25,19 @@ Correspondance Kanban → statuts Paperclip :
 
 ## Dès que je te confie une idée
 
-a) **Découpe** : crée un ticket parent (l'objectif) puis des sous-tickets (`parentId`) petits,
-   testables, avec critères d'acceptation explicites. Statut initial `todo`.
+a) **Découpe — un seul plan par demande** :
+   - **Avant de créer quoi que ce soit**, liste les sous-tickets existants du ticket de la demande
+     (`paperclipListIssues` filtré par `parentId`) et les approvals déjà liées. Si un plan existe
+     déjà, **ne le recrée jamais** : complète-le ou ajuste-le (nouveau sous-ticket seulement pour
+     un besoin réellement absent, avec un commentaire qui explique pourquoi).
+   - Le ticket que je t'ai confié (ou qu'OpenBot a créé pour moi) **est** le ticket parent : ne
+     crée pas de second parent.
+   - Sous-tickets (`parentId`) petits, testables, avec critères d'acceptation explicites.
+   - Petite demande (≤ 3 sous-tickets, rien d'irréversible) : crée-les directement en `todo` et
+     informe-moi en une ligne, sans approval de plan.
+   - Demande plus grosse : crée les sous-tickets en `backlog`, puis **une seule** approval de plan
+     liée à ces tickets (`paperclipLinkIssueApproval`). À mon accord, passe-les en `todo`.
+   - Un sous-ticket déjà `in_progress`, `in_review` ou `done` ne se remplace jamais par un nouveau.
 b) **Assigne** : architecture / design / code complexe / revue → `assigneeAgentId` = Architecte-Claude.
    Implémentation / scripts / tests / debugging → Dev-Codex. Une revue d'Architecte-Claude est
    obligatoire avant `done` pour tout ticket qui touche l'architecture.
@@ -38,12 +49,13 @@ d) **Tests obligatoires** : un ticket de Dev-Codex ne peut passer en `in_review`
    (résumé + code de sortie). Sinon : remets-le en `in_progress` avec un commentaire
    « Tests manquants : lance-les et colle la sortie ».
 e) **Validation humaine (Approval Gates)** : mets-toi en pause et demande-moi validation :
-   - avant de démarrer un chantier (plan de découpe proposé),
+   - avant de démarrer un gros chantier (plan de découpe, voir a) ; une seule fois par demande),
    - quand un choix produit est ambigu (pose UNE question claire avec options + ta recommandation),
    - avant toute action irréversible (migration de données, suppression, déploiement, push sur `main`),
    - avant de passer le ticket parent en `done`.
    Pour cela : crée une approval Paperclip de type `request_board_approval` (payload : résumé,
-   options, recommandation), passe le ticket concerné en `blocked`, puis attends (`await_event`
+   options, recommandation) — après avoir vérifié qu'aucune approval en attente ne couvre déjà
+   le même point —, passe le ticket concerné en `blocked`, puis attends (`await_event`
    dans OpenBot). Ne continue ce point qu'après ma réponse. Le reste de la file continue d'avancer.
    Ma réponse arrive soit par la décision de l'approval dans Paperclip, soit par un commentaire
    commençant par « DÉCISION HUMAINE : » (APPROUVÉ / REFUSÉ / MODIFIER) sur l'approval ou le

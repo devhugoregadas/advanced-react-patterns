@@ -9,6 +9,12 @@
 #   --register-mcp    ajoute le MCP Paperclip (identité du CEO) à TOUS les Claude Code / Codex
 #                     du Mac. Désactivé par défaut : OpenBot et les agents Paperclip n'en ont pas besoin.
 #   --unregister-mcp  retire cet ajout global (Claude Code + ~/.codex/config.toml, avec sauvegarde).
+#   --no-claude-executable  n'ajoute pas CLAUDE_CODE_EXECUTABLE (utile quand Paperclip embarquera
+#                     claude-agent-acp >= 0.100, dont le binaire supporte claude-opus-5-5).
+#   --codex-engine cli|acp|auto  moteur Codex (défaut cli). Le moteur ACP garde son propre bac à
+#                     sable et peut bloquer l'accès de Dev-Codex à l'API Paperclip (127.0.0.1:3100).
+#
+# Les réglages existants des agents (ex. adapterConfig.env) sont conservés : le script fusionne.
 #
 #   --ceo-brain openbot    (défaut) le CEO "pense" dans OpenBot (chat, notifications iPhone,
 #                          await_event, failover natif Claude→Codex). Dans Paperclip, sa fiche sert
@@ -26,6 +32,8 @@ STATE="$STATE_DIR/state.env"
 WORKSPACE="$HOME/Projets"; COMPANY="Studio IA"; CEO_BRAIN="openbot"
 CEO_HEARTBEAT_SEC=3600   # filet de sécurité ; le CEO est surtout réveillé par les événements
 MCP_MODE="keep"   # keep | register | unregister
+CLAUDE_EXEC=1     # force le CLI claude local (contourne le binaire trop ancien embarqué par Paperclip)
+CODEX_ENGINE="cli" # cli : respecte dangerouslyBypassApprovalsAndSandbox (accès réseau à Paperclip)
 
 while [[ $# -gt 0 ]]; do case "$1" in
   --workspace) WORKSPACE="$2"; shift 2;;
@@ -33,6 +41,8 @@ while [[ $# -gt 0 ]]; do case "$1" in
   --ceo-brain) CEO_BRAIN="$2"; shift 2;;
   --register-mcp) MCP_MODE="register"; shift;;
   --ceo-heartbeat-min) CEO_HEARTBEAT_SEC=$(( $2 * 60 )); shift 2;;
+  --no-claude-executable) CLAUDE_EXEC=0; shift;;
+  --codex-engine) CODEX_ENGINE="$2"; shift 2;;
   --unregister-mcp) MCP_MODE="unregister"; shift;;
   *) echo "Option inconnue : $1"; exit 1;;
 esac; done
@@ -69,23 +79,33 @@ CLAUDE_BIN="$(command -v claude || echo claude)"
 upsert() {
   local name="$1" role="$2" title="$3" adapter="$4" instr="$KIT_DIR/agents/$5/AGENTS.md" reports="$6" hb="$7" caps="$8"
   local model="${9:-}" effort="${10:-}"
-  local cfg
+  local id cfg
+  id=$(api GET "/api/companies/$CID/agents" | as_list | jq -r --arg n "$name" '.[] | select(.name==$n) | .id' | head -1)
   if [[ "$adapter" == claude_local ]]; then
+    local exe=""; [[ $CLAUDE_EXEC == 1 && "$CLAUDE_BIN" == /* ]] && exe="$CLAUDE_BIN"
     cfg=$(jq -n --arg cwd "$WORKSPACE" --arg i "$instr" --arg c "$CLAUDE_BIN" \
-      --arg m "$model" --arg e "$effort" \
+      --arg m "$model" --arg e "$effort" --arg x "$exe" \
       '{cwd:$cwd, instructionsFilePath:$i, command:$c, dangerouslySkipPermissions:true}
-       + (if $m=="" then {} else {model:$m} end) + (if $e=="" then {} else {effort:$e} end)')
+       + (if $m=="" then {} else {model:$m} end) + (if $e=="" then {} else {effort:$e} end)
+       + (if $x=="" then {} else {env:{CLAUDE_CODE_EXECUTABLE:$x}} end)')
   else
-    cfg=$(jq -n --arg cwd "$WORKSPACE" --arg i "$instr" \
-      '{cwd:$cwd, instructionsFilePath:$i, dangerouslyBypassApprovalsAndSandbox:true}')
+    cfg=$(jq -n --arg cwd "$WORKSPACE" --arg i "$instr" --arg eng "$CODEX_ENGINE" \
+      '{cwd:$cwd, instructionsFilePath:$i, dangerouslyBypassApprovalsAndSandbox:true, engine:$eng}')
+  fi
+  # Fusion avec la config existante : un PATCH remplace adapterConfig (et sa clé env) en entier.
+  if [[ -n "$id" ]]; then
+    local existing
+    existing=$(api GET "/api/agents/$id" | jq '(.agent // .data // .) | .adapterConfig // {}')
+    cfg=$(jq -n --argjson old "$existing" --argjson new "$cfg" '$old * $new')
+    if [[ $CLAUDE_EXEC == 0 && "$adapter" == claude_local ]]; then
+      cfg=$(jq 'del(.env.CLAUDE_CODE_EXECUTABLE)' <<<"$cfg")
+    fi
   fi
   local body
   body=$(jq -n --arg n "$name" --arg r "$role" --arg t "$title" --arg a "$adapter" --arg cap "$caps" \
     --arg rep "$reports" --argjson cfg "$cfg" --argjson hb "$hb" \
     '{name:$n, role:$r, title:$t, capabilities:$cap, adapterType:$a, adapterConfig:$cfg,
       runtimeConfig:{heartbeat:$hb}} + (if $rep=="" then {} else {reportsTo:$rep} end)')
-  local id
-  id=$(api GET "/api/companies/$CID/agents" | as_list | jq -r --arg n "$name" '.[] | select(.name==$n) | .id' | head -1)
   if [[ -z "$id" ]]; then
     id=$(api POST "/api/companies/$CID/agents" "$body" | id_of)
     echo "✔ Agent créé : $name ($id)" >&2
